@@ -133,5 +133,5 @@ This command will run the build script in a Linux container to generate a compat
 
 ### future plans
 
-- Passing secrets.
-- Injecting code at runtime rather than building into container.
+- [Passing secrets](https://github.com/jthomas/openwhisk-web-action-http-proxy/issues/1).
+- [Injecting code at runtime rather than building into container](https://github.com/jthomas/openwhisk-web-action-http-proxy/issues/2).
