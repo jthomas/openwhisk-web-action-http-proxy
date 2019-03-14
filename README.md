@@ -1,18 +1,18 @@
 # Apache OpenWhisk Web Action HTTP Proxy
 
-This project proxies HTTP traffic from Apache OpenWhisk Web Actions to existing web applications.
+This project proxies HTTP traffic from [Apache OpenWhisk](http://openwhisk.incubator.apache.org/) [Web Actions](https://github.com/apache/incubator-openwhisk/blob/master/docs/webactions.md) to existing web applications.
 
-HTTP events received by the Web Action Proxy are forwarded as HTTP requests to the web application. HTTP responses from the web application are returned as Web Action responses.
+[HTTP events](https://github.com/apache/incubator-openwhisk/blob/master/docs/webactions.md#http-context) received by the Web Action Proxy are forwarded as HTTP requests to the web application. HTTP responses from the web application are returned as Web Action [responses](https://github.com/apache/incubator-openwhisk/blob/master/docs/webactions.md#handling-http-requests-with-actions).
 
-This proxy is designed to be built into a Docker image alongside existing stateless web applications. Using Docker support in Apache OpenWhisk, web applications can then be executed on the serverless platform with minimal modifications.
+This proxy is designed to be built into a Docker image alongside existing stateless web applications. Using [Docker support](https://github.com/apache/incubator-openwhisk/blob/master/docs/actions-docker.md) in Apache OpenWhisk, web applications can then be executed on the serverless platform with minimal modifications.
 
-IMAGE
+![Web Action Proxy](./web-action-proxy.png)
 
 _**Please note: This is an alpha-stage experiment!** Don't expect everything to work. This project is designed to run small simple stateless web applications on Apache OpenWhisk. Please don't attempt to "lift 'n' shift" a huge stateful enterprise app server onto the platform!_
 
 ## Why?
 
-There are lots of existing (simple) stateless web applications that could easily be ran on a serverless platform. People have already written a number of custom plugins for web application frameworks to support running those framework applications on serverless platforms.
+There are lots of existing (simple) stateless web applications that could easily be ran on a serverless platform. People have already written a [number](https://github.com/IBM/expressjs-openwhisk) [of](https://github.com/claudiajs/claudia) [custom](https://github.com/logandk/serverless-wsgi) [plugins](https://github.com/Miserlou/Zappa) for web application frameworks to support running those framework applications on serverless platforms.
 
 These projects allow developers to continue to use frameworks they are familiar when building serverless web applications and provide an easy path to "lift and shift" existing web applications to serverless platforms.
 
