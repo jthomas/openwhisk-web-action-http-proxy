@@ -41,7 +41,7 @@ const is_binary_content = mime => {
     'application/xml',
   ]
 
-  if (mime.startsWith('text') || custom_text_mimes.includes(mime)) {
+  if (mime && mime.startsWith('text') || custom_text_mimes.includes(mime)) {
     return false
   }
 
@@ -51,7 +51,11 @@ const is_binary_content = mime => {
 // encode http response body into web action response body
 // binary content must be base64 encoded.
 const encode_response_body = async (resp) => {
-  const content_type = resp.headers.get('content-type').split(';')[0]
+  let content_type = resp.headers ? resp.headers.get('content-type') : ""
+
+  if (content_type && content_type != "") {
+    content_type = content_type.split(';')[0]
+  }
 
   if (is_binary_content(content_type)) {
     const buf = await resp.buffer()
