@@ -78,6 +78,8 @@ CMD ./script.sh
 ./proxy & npm start
 ```
 
+- Make `script.sh` executable.
+
 ### docker build, tag and push!
 
 - Build the Docker image for the example application.
@@ -95,7 +97,7 @@ CMD ./script.sh
 - Push the local image to Docker Hub.
 
 ```
- docker push jamesthomas/expressjs
+ docker push <USERNAME>/expressjs
 ```
 
 ### create web action
