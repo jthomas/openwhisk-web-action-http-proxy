@@ -4,7 +4,7 @@ This project proxies HTTP traffic from [Apache OpenWhisk](http://openwhisk.incub
 
 [HTTP events](https://github.com/apache/incubator-openwhisk/blob/master/docs/webactions.md#http-context) received by the Web Action Proxy are forwarded as HTTP requests to the web application. HTTP responses from the web application are returned as Web Action [responses](https://github.com/apache/incubator-openwhisk/blob/master/docs/webactions.md#handling-http-requests-with-actions).
 
-This proxy is designed to be built into a Docker image alongside existing stateless web applications. Using [Docker support](https://github.com/apache/incubator-openwhisk/blob/master/docs/actions-docker.md) in Apache OpenWhisk, web applications can then be executed on the serverless platform with minimal modifications.
+This proxy is designed to be built into a Docker image that will run the stateless web applications. Using [Docker support](https://github.com/apache/incubator-openwhisk/blob/master/docs/actions-docker.md) in Apache OpenWhisk, web applications can then be executed on the serverless platform with minimal modifications.
 
 ![Web Action Proxy](./web-action-proxy.png)
 
@@ -18,23 +18,122 @@ These projects allow developers to continue to use frameworks they are familiar 
 
 Using framework plugins as the approach, to allowing web application to run on serverless platforms, needs the same custom proxy plugin re-implemented for every different framework. This project provides a mechanism, using an external HTTP proxy process, to support any existing web application without needing a custom framework plugin.
 
-## Usage
+## Runtime Mode Options
 
-Using this proxy relies on having a Docker image containing the web application and the proxy binary.
+The proxy binary needs to be executed in a Docker container alongside the web application process.
 
-Both processes are started within the container on different ports. The proxy uses port 8080 and the web application can use any other port. An environment variable is used to configure the local port to proxy.
+Both HTTP processes must be started on different ports. The proxy uses port 8080 and the web application can use any other port. An environment variable or action parameter can be used to configure the local port to proxy.
 
-With an existing Docker image, you can just extend your image with extra commands as shown below.
+Two  different options are available for getting web application source files into the runtime environment.
 
-### configuration
+- **Build source files directly into the container image alongside proxy binary.**
+- **Dynamically inject source files into container runtime during initialisation.**
 
-The following environment variables are used to configure the proxy port and application liveness check.
+Building source files into the container is simpler and incurs lower cold-starts delays, but means source code will be publicly available on Docker Hub. Injecting source files through the action zips means the public container image can exclude all private source files and secrets. The extra initialisation time for dynamic injection does add to cold-start delays.
 
+## Configuration
+
+HTTP proxy options can be defined using environment variables (defined in Dockerfiles) or default action parameters. The following configuration options are supported.
+
+### environment variables
+
+- `PROXY_HOST` - host to proxy (default: `localhost`).
 - `PROXY_PORT` - local port used by the web application (default: `80`).
 - `PROXY_ALIVE_PATH` - URL path to check for `200` response indicating server is available (default: `/`).
 - `PROXY_ALIVE_DELAY`- poll delay (ms) in between liveness checks (default: `100`)
+- `PROXY_PROTOCOL` - protocol prefix used in proxy requests (default: `http`)
+
+### action parameters
+
+- `__ow_proxy_host` - host to proxy (default: `localhost`).
+- `__ow_proxy_port` - local port used by the web application (default: `80`).
+- `__ow_proxy_alive_path` - URL path to check for `200` response when server is available (default: `/`).
+- `__ow_proxy_alive_delay`- poll delay (ms) in between liveness checks (default: `100`)
+- `__ow_proxy_protocol` - protocol prefix used in proxy requests (default: `http`)
+- `__ow_proxy_env_<ENV_VAR_NAME>` - set custom environment variable in runtime.
 
 *note: the web application cannot use port 8080 as this is used by the proxy to expose the runtime API.* 
+
+## Usage (Dynamic Runtime Injection)
+
+Dynamic runtime injection needs you to build a Docker image containing just the proxy binary and runtime dependencies. Application source files are provided in the action zip file and extracted into the runtime upon initialisation. The proxy will start the app server on the first request.
+
+### define custom docker image
+
+This image should contain just the proxy binary and necessary dependencies (e.g node.js runtime).
+
+```
+FROM image:version
+
+ADD proxy /app/
+WORKDIR /app
+EXPOSE 8080
+
+CMD ./proxy
+```
+
+The Dockerfile must have the following commands.
+
+- `COPY/ADD proxy <dest>` - Add the proxy binary from this project to the runtime filesystem 
+- `EXPOSE 8080` - Expose the proxy port used to handle requests from the platform.
+- `CMD ./proxy` - Starts HTTP proxy process to handle platform requests.
+
+*Environment variables can also be defined here to set proxy configuration options, instead of using default action parameters as shown below.*
+
+### build custom docker image
+
+- Run the Docker build command to create a new image.
+
+```
+docker build -t <REPO>/<IMAGE> .
+```
+
+- Push the image to a public Docker Hub repository.
+
+```
+docker push <REPO>/<IMAGE>
+```
+
+*Using Docker images in Apache OpenWhisk needs those images to be available on Docker Hub. Private container registries are not currently supported in the platform.*
+
+### use image with openwhisk web actions
+
+- Bundle application source files into a zip file.
+
+```
+zip -r action.zip *
+```
+
+- Create the Web Action from the Docker image with the following command.
+  - Replace `<START_COMMAND>` with the command needed to start the web application server.
+  - Replace `<PROXY_PORT>` with the port used by the web application server.
+  - Replace `<ACTION_NAME>` with an action name.
+
+```
+wsk action create --docker <REPO>/<IMAGE> --web true --main "<START_COMMAND>" -p "__ow_proxy_port" <PROXY_PORT> <ACTION_NAME> action.zip
+```
+
+- Retrieve the Web Action URL for the new action.
+
+```
+wsk action get <ACTION_NAME> --url
+```
+
+### invoke the web action
+
+Web Action URLs are in this format.
+
+```
+https://<OW_HOST>/api/v1/web/<NAMESPACE>/default/<ACTION_NAME>/
+```
+
+Invoking these URLs with HTTP requests will proxy the web application from inside the container.
+
+Requests to the base Web Action URL will be treated as requests to the URL root for the web application. Subpaths requests on the base Web Action URL will be forwarded as sub-paths to the web application.
+
+## Usage (Sources Files In Image)
+
+With an existing Docker image containing application runtime and source files, you can just extend the image with extra commands as shown below.
 
 ### from an existing web app image
 
@@ -63,14 +162,21 @@ The `CMD` for the image should start both processes in the foreground. This can 
 ./<PROXY_LOCATION>/proxy & <WEB APP START CMD>
 ```
 
-### building docker image
+### build custom docker image
 
 - Run the Docker build command to create a new image.
+
+```
+docker build -t <REPO>/<IMAGE> .
+```
+
 - Push the image to a public Docker Hub repository.
 
-Using Docker images in Apache OpenWhisk needs those images to be available on Docker Hub.
+```
+docker push <REPO>/<IMAGE>
+```
 
-Private container registries are not currently supported in the platform.
+*Using Docker images in Apache OpenWhisk needs those images to be available on Docker Hub. Private container registries are not currently supported in the platform.*
 
 ### use image with openwhisk web actions
 
@@ -130,8 +236,3 @@ npm run build
 ```
 
 This command will run the build script in a Linux container to generate a compatible binary for the runtime.
-
-### future plans
-
-- [Passing secrets](https://github.com/jthomas/openwhisk-web-action-http-proxy/issues/1).
-- [Injecting code at runtime rather than building into container](https://github.com/jthomas/openwhisk-web-action-http-proxy/issues/2).
