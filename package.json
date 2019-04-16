@@ -12,6 +12,7 @@
   "author": "James Thomas <james@jamesthom.as> (https://jamesthom.as)",
   "license": "Apache-2.0",
   "dependencies": {
+    "adm-zip": "^0.4.13",
     "express": "^4.16.4",
     "is-base64": "^0.1.0",
     "node-fetch": "^2.3.0",

@@ -1,5 +1,5 @@
 #!/bin/bash
 
 cd /proxy
-npm i -g nexe@next
+npm i -g nexe
 nexe index.js
