@@ -26,8 +26,8 @@ Both HTTP processes must be started on different ports. The proxy uses port 8080
 
 Two  different options are available for getting web application source files into the runtime environment.
 
-- **Build source files directly into the container image alongside proxy binary.**
-- **Dynamically inject source files into container runtime during initialisation.**
+- **[Build source files directly into the container image alongside proxy binary.](#usage-sources-files-in-image)**
+- **[Dynamically inject source files into container runtime during initialisation.](#usage-dynamic-runtime-injection)**
 
 Building source files into the container is simpler and incurs lower cold-starts delays, but means source code will be publicly available on Docker Hub. Injecting source files through the action zips means the public container image can exclude all private source files and secrets. The extra initialisation time for dynamic injection does add to cold-start delays.
 
