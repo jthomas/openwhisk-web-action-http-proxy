@@ -18,6 +18,66 @@ These projects allow developers to continue to use frameworks they are familiar 
 
 Using framework plugins as the approach, to allowing web application to run on serverless platforms, needs the same custom proxy plugin re-implemented for every different framework. This project provides a mechanism, using an external HTTP proxy process, to support any existing web application without needing a custom framework plugin.
 
+## Node.js + Express Example
+
+This is an [example Node.js web application](https://github.com/jthomas/express_example), built using the [Express web application framework](https://expressjs.com/): 
+
+![https://camo.githubusercontent.com/2aa43809d8d8a9f9ccb906c1028d81f1ba1913d9/687474703a2f2f7368617065736865642e636f6d2f696d616765732f61727469636c65732f657870726573735f6578616d706c652e6a7067](https://camo.githubusercontent.com/2aa43809d8d8a9f9ccb906c1028d81f1ba1913d9/687474703a2f2f7368617065736865642e636f6d2f696d616765732f61727469636c65732f657870726573735f6578616d706c652e6a7067)
+
+The web application renders static HTML content for three routes (`/`,  `/about` and `/contact`). CSS files and fonts are also served by the backend.
+
+**Use these steps to run this web application on Apache OpenWhisk using the Web Action Proxy...**
+
+- Clone project repo.
+
+```
+git clone https://github.com/jthomas/express_example
+```
+
+- Install project dependencies in the `express_example` directory.
+
+```
+npm install
+```
+
+- Bundle web application and libraries into zip file.
+
+```
+zip -r action.zip *
+```
+
+- Create the Web Action (using a custom runtime image) with the following command.
+
+```
+wsk action create --docker jamesthomas/generic_node_proxy --web true --main "npm start" -p "__ow_proxy_port" 3000 web_app action.zip
+```
+
+- Retrieve the Web Action URL for the new action.
+
+```
+wsk action get web_app --url
+```
+
+- Open the Web Action URL in a HTTP web browser. *(Note: Web Action URLs must end with a forward-slash to work correctly, e.g. `https://<OW_HOST>/api/v1/web/<NAMESPACE>/default/web_app/`).*
+
+![Web Action Proxy Express JS](http://jamesthom.as/images/express-js-web-action-proxy.gif)
+
+If this works, the web application should load as above. Clicking links in the menu will navigate to different pages in the application.
+
+#### custom runtime image
+
+This example Web Action uses my own pre-built custom runtime image for Node.js web applications (`jamesthomas/generic_node_proxy`). This was created from the following Dockerfile to support dynamic runtime injection of web application source files.
+
+```
+FROM node:10
+
+ADD proxy /app/
+WORKDIR /app
+EXPOSE 8080
+
+CMD ./proxy
+```
+
 ## Runtime Mode Options
 
 The proxy binary needs to be executed in a Docker container alongside the web application process.

@@ -8,47 +8,80 @@ These steps can be used to wrap other Node.js web applications.
 
 This is the example application that will be wrapped into a Docker image with the Web Action Proxy.
 
-https://github.com/shapeshed/express_example
+ [https://github.com/jthomas/express_example]( https://github.com/jthomas/express_example)
 
 ![Express Example](https://camo.githubusercontent.com/2aa43809d8d8a9f9ccb906c1028d81f1ba1913d9/687474703a2f2f7368617065736865642e636f6d2f696d616765732f61727469636c65732f657870726573735f6578616d706c652e6a7067)
 
 The web application renders static HTML content for three routes (`/`,  `/about` and `/contact`). CSS files and fonts are also served by the backend.
 
-## instructions
+## build instructions - dynamic injection at runtime
 
 ### clone project repo and install modules
 
 ```
-git clone https://github.com/shapeshed/express_example.git
+git clone https://github.com/jthomas/express_example
 ```
 
 - Run `npm install` in the `express_example` directory to download the project modules.
+- Bundle web application and libraries into zip file.
 
-### modify the url references
-
-Due to the limitations of the Web Action Proxy, all URLs (for local files) in HTML and CSS files must refer to relative locations, e.g.`./about` rather than `/about`.
-
-- Replace URL paths with relative locations in  `views/layout.jade`
-
-```diff
--            a(href="/") Home
-+            a(href="./") Home
-           li
--            a(href="/about") About
-+            a(href="./about") About
-           li
--            a(href="/contact") Contact
-+            a(href="./contact") Contact
+```
+zip -r action.zip *
 ```
 
-- Replace URL paths with relative locations in  `public/stylesheets/chunkfive-fontface.css` 
+### create docker build file assets
 
-```diff
--    link(rel='stylesheet', href='/stylesheets/style.css')
--    link(rel='stylesheet', href='/stylesheets/chunkfive-fontface.css')
-+    link(rel='stylesheet', href='./stylesheets/style.css')
-+    link(rel='stylesheet', href='./stylesheets/chunkfive-fontface.css')
+- Create a Dockerfile in the parent directory to the `express_example` with the following contents.
+
 ```
+FROM node:10
+
+ADD proxy /app/
+WORKDIR /app
+EXPOSE 8080
+
+CMD ./proxy
+```
+
+- Copy the `proxy` binary from the Web Action Proxy repo to the parent directory of `express_example`.
+
+### docker build, tag and push!
+
+- Build the Docker image for the example application.
+
+```
+ docker build -t expressjs .
+```
+
+- Tag the local image with the Docker Hub repo name.
+
+```
+ docker tag expressjs <USERNAME>/expressjs
+```
+
+- Push the local image to Docker Hub.
+
+```
+ docker push <USERNAME>/expressjs
+```
+
+### create web action
+
+- Create the Web Action (using a custom runtime image) with the following command.
+
+```
+wsk action create --docker <USERNAME>/expressjs --web true --main "npm start" -p "__ow_proxy_port" 3000 web_app action.zip
+```
+
+## build instructions - static source files in runtime image
+
+### clone project repo and install modules
+
+```
+git clone https://github.com/jthomas/express_example
+```
+
+- Run `npm install` in the `express_example` directory to download the project modules.
 
 ### create docker build file assets
 
@@ -108,7 +141,7 @@ CMD ./script.sh
 wsk action create expressjs --docker <USERNAME>/expressjs --web true
 ```
 
-### access web application
+## Accessing Web Application
 
 - Retrieve the Web Action URL for the `expressjs` action.
 
